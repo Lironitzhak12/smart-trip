@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <title>Smart Trip - זמינות</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Segoe UI', sans-serif;
+      direction: rtl;
+      background-image: url('15e962d4-0992-448b-944a-5eb3824db920.jpeg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+
+    .overlay {
+      background-color: rgba(255, 255, 255, 0.9);
+      max-width: 420px;
+      margin: 100px auto;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+
+    h2 {
+      text-align: center;
+      color: #0077b6;
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      text-align: right;
+      margin-top: 16px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 24px;
+      padding: 12px;
+      font-size: 16px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+
+    #response {
+      margin-top: 20px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .success {
+      color: #2e7d32;
+    }
+
+    .error {
+      color: #d32f2f;
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay">
+    <h2>הזן זמינות לטיול</h2>
+    <form id="availabilityForm">
+      <label for="user_email">דוא"ל:</label>
+      <input type="email" id="user_email" placeholder="your@email.com" required>
+
+      <label for="start_date">תאריך התחלה:</label>
+      <input type="date" id="start_date" required>
+
+      <label for="end_date">תאריך סיום:</label>
+      <input type="date" id="end_date" required>
+
+      <button type="submit">שלח</button>
+    </form>
+    <p id="response"></p>
+    <button id="toGroupBtn" style="display:none;">לצפייה בקבוצה שלך</button>
+  </div>
+
+  <script>
+    document.getElementById("availabilityForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const user_email = document.getElementById("user_email").value;
+      const start_date = document.getElementById("start_date").value;
+      const end_date = document.getElementById("end_date").value;
+
+      if (!user_email || !start_date || !end_date) return;
+
+      const availability = [];
+      const current = new Date(start_date);
+      const last = new Date(end_date);
+
+      while (current <= last) {
+        availability.push(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+      }
+
+      const payload = { user_email, availability };
+      const responseElem = document.getElementById("response");
+      const toGroupBtn = document.getElementById("toGroupBtn");
+
+      toGroupBtn.style.display = "none"; // הסתרת הכפתור בתחילת הטיפול
+
+      try {
+        const res = await fetch("https://zac34th6w3.execute-api.eu-north-1.amazonaws.com/prod/submitAvailability", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          responseElem.textContent = `✨ זמינותך נשמרה! שויכת לקבוצה: ${result.group_id}`;
+          responseElem.className = "success";
+
+          // הופך את הכפתור לגלוי ומוסיף לו אירוע onclick
+          toGroupBtn.style.display = "block";
+          toGroupBtn.onclick = () => {
+            // כאן נעביר את המייל לדף הקבוצה באמצעות פרמטר ב-URL
+            window.location.href = `date.html?user_email=${encodeURIComponent(user_email)}`;
+          };
+        } else {
+          responseElem.textContent = "⚠️ שגיאה בשמירה: " + (result.error || "נסי שוב מאוחר יותר");
+          responseElem.className = "error";
+        }
+      } catch (err) {
+        responseElem.textContent = "⚠️ שגיאה כללית: " + err.message;
+        responseElem.className = "error";
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <title>Smart Trip - תאריך אופטימלי</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-image: url('15e962d4-0992-448b-944a-5eb3824db920.jpeg'); /* רקע אחיד כמו בשאר העמודים */
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      direction: rtl;
+    }
+
+    .container {
+      background-color: rgba(255, 255, 255, 0.95);
+      max-width: 500px;
+      margin: 120px auto;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    h2 {
+      text-align: center;
+      color: #0077b6;
+      margin-bottom: 24px;
+    }
+
+    label {
+      font-weight: bold;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    input,
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+
+    button {
+      background-color: #0077b6;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #005f87;
+    }
+
+    #result {
+      margin-top: 20px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .success {
+      color: #2e7d32;
+    }
+
+    .error {
+      color: #d32f2f;
+    }
+
+    .participants {
+      margin-top: 10px;
+      text-align: center;
+      color: #333;
+    }
+
+    .participants ul {
+      list-style: none;
+      padding-right: 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 12px;
+    }
+
+    .participants ul li {
+      background-color: #e0f7fa;
+      color: #00796b;
+      padding: 6px 12px;
+      margin: 4px;
+      border-radius: 16px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>חשב את התאריך האופטימלי</h2>
+    <label for="user_email">דוא"ל שלך:</label>
+    <input type="email" id="user_email" placeholder="example@example.com" required />
+    <button onclick="calculateDate()">חשב תאריך</button>
+    <div id="result"></div>
+    <div class="participants" id="participants"></div>
+  </div>
+
+  <script>
+    async function calculateDate() {
+      const email = document.getElementById("user_email").value.trim();
+      const resultElem = document.getElementById("result");
+      const participantsElem = document.getElementById("participants");
+
+      resultElem.textContent = "";
+      participantsElem.textContent = "";
+      resultElem.className = "";
+      participantsElem.className = "";
+
+      if (!email) {
+        resultElem.textContent = 'יש להזין דוא"ל תקף.';
+        resultElem.className = "error";
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `https://zac34th6w3.execute-api.eu-north-1.amazonaws.com/prod/getUserGroup?user_email=${encodeURIComponent(
+            email
+          )}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          resultElem.textContent = "⚠️ שגיאה: " + (data.error || "לא ניתן לחשב תאריך כרגע.");
+          resultElem.className = "error";
+          return;
+        }
+
+        if (!data.group_id) {
+          resultElem.textContent = "לא נמצאה קבוצה מתאימה למייל זה.";
+          resultElem.className = "error";
+          return;
+        }
+
+        resultElem.innerHTML = `
+          ✅ אתה משויך לקבוצה: <strong>${data.group_id}</strong><br>
+          🎯 תאריכים מוצעים: <strong>${data.optimalDates.join(", ")}</strong><br>
+          👥 משתתפים בקבוצה:
+        `;
+        resultElem.className = "success";
+
+        if (data.groupMembers && data.groupMembers.length > 0) {
+          participantsElem.innerHTML = `<ul>${data.groupMembers
+            .map(user => `<li>${user.first_name} ${user.last_name} - ${user.phone}</li>`)
+            .join("")}</ul>`;
+        } else {
+          participantsElem.textContent = "לא נמצאו משתתפים נוספים בקבוצה.";
+        }
+      } catch (err) {
+        resultElem.textContent = "⚠️ שגיאה כללית: " + err.message;
+        resultElem.className = "error";
+      }
+    }
+  </script>
+</body>
+</html>
